@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "srl_il"
+version = "0.1.0"  # Replace with your actual version
+description = "A framework for loading, training, and evaluating for imitation learning. From ETHz Soft Robotics Lab."
+readme = "README.md"
+# license = "GPL-3.0"  # Replace with your actual license
+authors = [{ name = "Chenyu Yang", email = "chenyu.yang@ethz.ch" }]  # Replace with your details
+dependencies = [
+    "torch",
+    "torchvision",
+    "diffusers",
+    "wandb",
+    "hydra-core",
+    "h5py",
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "opencv-python",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "flake8",
+    "mypy",
+]
+test = [
+    "pytest",
+    "coverage",
+]
+robomimic = [
+    "robomimic",
+    "robosuite==1.4.1"
+]
+diffsion_policy = [
+    "diffusion_policy",
+    "threadpoolctl",
+    "pytorch3d",
+    "imagecodecs==2022.8.8",
+    "av"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+exclude = []

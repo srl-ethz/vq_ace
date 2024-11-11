@@ -1,0 +1,69 @@
+img0: sideview_image
+img1: robot0_eye_in_hand_image
+task_tag: tool_hang_image
+data:
+  # data_path: Data/public/tool_hang/ph/image.hdf5
+  data_path: Data/public/robomimic_image/robomimic/datasets/tool_hang/ph/image_abs.hdf5
+  rgb_processing_keys: ['${...img0}', '${...img1}']
+  keys_traj: [['img0', '${....img0}', null, 1],  # use the first frame as the observation
+              ['img1', '${....img1}', null, 1],  
+              ['robot0_eef_pos', 'robot0_eef_pos', null, 1],  
+              ['robot0_eef_quat', 'robot0_eef_quat', null, 1],  
+              ['robot0_gripper_qpos', 'robot0_gripper_qpos', null, 1],  
+              # ['object', 'object', null, 1],  
+              ['actions', 'actions', null, null] # use the rest of the frames as the action
+            ] 
+  preloaded: false # this is too large to preload
+  num_worker: 4
+
+target_dims:
+  actions: 10
+
+env:
+  _target_: srl_il.simulators.robomimic.RobomimicEnv
+  env_name: ToolHang
+  env_type: 1
+  obs_name_mapping:
+    - [img0, '${....img0}']
+    - [img1, '${....img1}']
+  env_kwargs:
+    has_renderer: false
+    has_offscreen_renderer: true
+    ignore_done: true
+    use_object_obs: true
+    use_camera_obs: true
+    control_freq: 20
+    controller_configs: 
+      type: "OSC_POSE"
+      input_max: 1
+      input_min: -1
+      output_max: [0.05,0.05,0.05,0.5,0.5,0.5]
+      output_min: [-0.05,-0.05,-0.05,-0.5,-0.5,-0.5]
+      kp: 150
+      damping: 1
+      impedance_mode: "fixed"
+      kp_limits: [0,300]
+      damping_limits: [0,10]
+      position_limits: null
+      orientation_limits: null
+      uncouple_pos_ori: true
+      control_delta: false
+      interpolation: null
+      ramp_ratio: 0.2
+    
+    robots: [
+          "Panda"
+      ]
+    camera_depths: false
+    camera_heights: 240
+    camera_widths: 240
+    reward_shaping: false
+    camera_names: [
+        "sideview",
+        "robot0_eye_in_hand"
+    ]
+    render_gpu_device_id: 0
+
+train:
+  rollout_horizon: 700
+  num_epochs: 800

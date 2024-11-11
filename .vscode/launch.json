@@ -1,0 +1,83 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python Debugger: Run pipeline",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/run_pipeline.py",
+            "args": ["--config-name=${input:choose_cfg}", 
+                    "debugrun=true",
+                    "wandb_cfg.mode=disabled"
+                ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python Debugger: check dataset",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/dataset_check.py",
+            "args": ["--config-name=${input:choose_cfg}"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python Debugger: export onnx",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/export_onnx.py",
+            "args": ["--config-name=${input:choose_cfg}",
+                    "+resume_path=${input:choose_ckpt}"
+                ],
+            "console": "integratedTerminal",
+            "env":{
+                "TORCH_LOGS":"+dynamo",
+                "TORCHDYNAMO_VERBOSE":"1"
+            }
+        },
+        {
+            "name": "Python Debugger: resume a training",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/run_pipeline.py",
+            "args": ["--config-name=${input:choose_cfg}",
+                    "+resume_path=${input:choose_ckpt}"
+                ],
+            "console": "integratedTerminal",
+            "env":{
+                "TORCH_LOGS":"+dynamo",
+                "TORCHDYNAMO_VERBOSE":"1"
+            }
+        }
+        
+    ],
+    "inputs": [
+        {
+          "id": "choose_cfg",
+          "type": "pickString",
+          "description": "hydra config file to process",
+          "options": ["imitation_learning_robomimic_act",
+                      "imitation_learning_robomimic_diffusion"],
+          "default": "train_embed_vq_act"
+        },
+        {
+            "id": "choose_ckpt",
+            "type": "command",
+            "command": "filePicker.pick",
+            "args": {
+                "masks": "runs/*/checkpoints/*.pth",
+                "display": "fileRelativePath",
+                "output": "filePath"
+            }
+          }
+      ]
+}
