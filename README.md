@@ -1,6 +1,5 @@
 # srl_il
-A code framework for imitation learning, from ETHz Soft Robotics Labs
-
+This is a code base designed for rapid prototyping and benchmarking of imitation learning techniques. With its flat configuration system, the users can easily test out their new data, configuration, algorithm, and ideas.
 
 ## Get started
 
