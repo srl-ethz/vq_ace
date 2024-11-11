@@ -44,6 +44,10 @@ diffsion_policy = [
     "imagecodecs==2022.8.8",
     "av"
 ]
+onnx = [
+    "onnx",
+    "onnxruntime"
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
