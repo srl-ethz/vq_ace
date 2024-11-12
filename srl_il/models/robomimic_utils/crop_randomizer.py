@@ -44,8 +44,8 @@ class CropRandomizer(nn.Module):
                 num_crops=self.num_crops,
                 pos_enc=self.pos_enc,
             )
-            # [B, N, ...] -> [B * N, ...]
-            return join_dimensions(out, 0, 1)
+            # [B, T, N, C, H, W] -> [B, T * N, C, H, W]
+            return join_dimensions(out, out.ndim-5, out.ndim-4)
         else:
             # take center crop during eval
             out = ttf.center_crop(img=inputs, output_size=(
@@ -54,7 +54,7 @@ class CropRandomizer(nn.Module):
                 B,C,H,W = out.shape
                 out = out.unsqueeze(1).expand(B,self.num_crops,C,H,W).reshape(-1,C,H,W)
                 # [B * N, ...]
-            return out
+            return out.contiguous()
 
     def forward(self, inputs):
         return self.forward_in(inputs)
