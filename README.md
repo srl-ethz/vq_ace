@@ -112,17 +112,15 @@ This code base relies heavily on mixins to make the system flatly configurable, 
 
 ```python
 class Base(AutoInit, cfgname_and_funcs=(('base_cfg', '_init_base'),)):
-    def _init_base(self, arg_a, arg_b):
+    def _init_base(self, arg_a):
         self.something_list = []
         self.a = arg_a
-        self.b = arg_b
     def print_something(self):
         print(self.something_list)
 
 class MixA(AutoInit, cfgname_and_funcs=(('mix_cfg', '_init_mix'),)):
-    def _init_mix(self, arg_c, arg_d):
-        self.c = arg_c
-        self.d = arg_d
+    def _init_mix(self, arg_b):
+        self.b = arg_b
     def func_a(self, a):
         self.something_list.append("a")
 
@@ -135,11 +133,9 @@ Then the `Child` class can be initialized from the following config dict, the co
 Child({
     "base_cfg":{
         "arg_a": 0
-        "arg_b": 1
     },
     "mix_cfg":{
-        "arg_c": "c"
-        "arg_d": "d"
+        "arg_b": "b"
     }
 })
 ```
