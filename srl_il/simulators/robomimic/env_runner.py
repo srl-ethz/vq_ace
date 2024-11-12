@@ -45,7 +45,7 @@ class RobomimicEnv:
             render=False,
             render_offscreen=render_video,
             use_image_obs=env_kwargs.get("use_camera_obs", False),
-            # use_depth_obs=env_kwargs.get("camera_depths", False)
+            use_depth_obs=env_kwargs.get("camera_depths", False)
         )
 
         self._obs_name_mapping = obs_name_mapping if obs_name_mapping is not None else []

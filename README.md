@@ -16,7 +16,7 @@ pip install -e .[robomimic] # will install optional robomimic dependencies
 ```
 
 ### Download the dataset 
-Find [here](https://robomimic.github.io/docs/datasets/robomimic_v0.1.html#method-1-using-download-datasets-py-recommended) the instructions for downloading dataset
+Find [here](https://robomimic.github.io/docs/datasets/robomimic_v0.1.html#method-1-using-download-datasets-py-recommended) the instructions for downloading dataset. (In this section we use image dataset, so please run download with `--hdf5_types image`)
 
 
 ### Train and rollout
