@@ -74,7 +74,7 @@ class ChunkBuffer:
 
 
 class ChunkBufferBatch:
-    def __init__(self, batch_size, data_shape, chunk_length, max_length=None, device=None):
+    def __init__(self, batch_size, data_shape, chunk_length, padding_type="near", max_length=None, device=None):
         """
         Create a ChunkBuffer for batch data. The shape of the data should be (B, T, *data_shape)
         This buffer provides reset_idx
@@ -84,6 +84,7 @@ class ChunkBufferBatch:
         self.data_buffer = ChunkBuffer(shape, chunk_dim, chunk_length, max_length, dtype=torch.float32, device = device)
         self.mask_buffer = ChunkBuffer(shape[:2], chunk_dim, chunk_length, max_length, dtype=torch.bool, device = device)
         self.mask_buffer._buffer.fill_(False)
+        self.padding_type = padding_type
 
     def append(self, data):
         """
@@ -99,8 +100,18 @@ class ChunkBufferBatch:
         """
         Get the top chunk from the buffer
         """
-        data, _ = self.data_buffer.get_top()
-        mask, _ = self.mask_buffer.get_top()
+        data, _ = self.data_buffer.get_top() # (B, T, *data_shape)
+        mask, _ = self.mask_buffer.get_top() # (B, T) 1 means valid data
+        B,T = mask.shape
+        if self.padding_type == "near":
+            first_valid_indices = mask.int().argmax(dim=1)  # Shape: (B,)
+            # Handle batches with all zeros in the mask
+            has_valid_data = mask.sum(dim=1) > 0  # Shape: (B,)
+            first_valid_indices = torch.where(has_valid_data, first_valid_indices, torch.zeros_like(first_valid_indices))
+            first_valid_data = data[torch.arange(B), first_valid_indices]
+            first_valid_data_expanded = first_valid_data.unsqueeze(1).expand(-1, T, *([-1]*(data.dim()-2)))  # Shape: (B, T, *data_shape)
+            invalid_positions = (mask == 0).reshape(B,T, *([1]*(data.dim()-2)))  # Shape: (B, T, 1)
+            data = torch.where(invalid_positions, first_valid_data_expanded, data)
         return data, mask
 
     def reset_idx(self, idx):

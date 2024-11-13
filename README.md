@@ -11,6 +11,7 @@ conda activate srl_il
 
 pip install git+https://github.com/ARISE-Initiative/robomimic.git@9273f9c # install the latest robomimic by the time this is document is writen. Note, this is different v0.3.0
 
+git clone git@github.com:srl-ethz/srl_il.git
 cd srl_il
 pip install -e .[robomimic] # will install optional robomimic dependencies
 ```
@@ -103,6 +104,10 @@ n_action_steps: 20
 n_latency_steps: 0
 ```
 
+### Check your dataset
+
+Take a look at `scripts/dataset_check.py`, run it. It samples some batches from dataloader, and save the plots and gifs of the data into the run directory.
+
 
 ## Key Components
 
@@ -192,4 +197,15 @@ It follows the idea of *groups* in robomimic, where each group contains the obse
 - The robomimic tasks and observation encoders are adapted from [Robomimic](https://github.com/ARISE-Initiative/robomimic)
 - The linear normalizer implementation is adapted from [diffusion policy](https://github.com/real-stanford/diffusion_policy)
 - The vector quantize implementation is adapted from [vq_bet_officia](https://github.com/jayLEE0301/vq_bet_official)
+
+
+## Trouble shooting
+
+### Problem install egl_probe when you install robomimic
+
+try find [egl_probe from conda](https://anaconda.org/conda-forge/egl-probe) if you use a conda environment. 
+
+### mujoco-py related error
+
+mujoco-py is deprecated. So please remove it. Also check your `site-packages` to make sure that it is completely removed. Make sure that you get `ImportError` when you `import mujoco_py`
 
