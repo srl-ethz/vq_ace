@@ -290,6 +290,9 @@ class NormalizationMixin(AutoInit, cfgname_and_funcs=(("normalizer_cfg", "_init_
                 mean, std = self._post_augmentor_stats_normalizer(k, **v)
             else:
                 raise NotImplementedError(f"Normalization type {v['type']} is not implemented")
+            if (std< 1e-3).any():
+                print(f"Warning: std is too small for {k}, set to 1e-3")
+                std = torch.where(std < 1e-3, torch.tensor(1e-3), std)
             self.algo._normalizers[k] = LinearNormalizer(mean, std)
 
 
