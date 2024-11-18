@@ -35,14 +35,25 @@ class Pipeline(AutoInit, cfgname_and_funcs=((None, "_init_workspace"),)):
     Only the pipeline and its subclasses should define the run method.
     """
     
-    def _init_workspace(self, seed=0, output_dir=None, debugrun=False, **kwargs):
+    def _init_workspace(self, **cfg):
         """
         Initialize the workspace configuration.
         """
+        seed = cfg.get("seed", 0)
+        output_dir = cfg.get("output_dir", None)
+        debugrun = cfg.get("debugrun", False)
         self.debugrun = debugrun
-        self.resume = "resume_path" in kwargs.keys()
+        self.resume = "resume_path" in cfg.keys()
+        if self.resume:
+            self.resume_path = cfg["resume_path"]
         self.output_dir = output_dir
-        self._cfg = kwargs
+        self._cfg = cfg
+
+        # dump the config if output_dir is not None
+        if self.output_dir is not None:
+            os.makedirs(self.output_dir, exist_ok=True)
+            with open(os.path.join(self.output_dir, "config.yaml"), "w") as f:
+                OmegaConf.save(cfg, f)
         if not self.resume:
             set_seed(seed)
 

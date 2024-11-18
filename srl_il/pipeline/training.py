@@ -25,24 +25,18 @@ class TrainPipeline(Pipeline, AlgoMixin, DatasetMixin, Lr_SchedulerMixin, WandbM
         super().__init__(*args, **kwargs)
         assert isinstance(self.algo, Algo), "algo should be an instance of Algo"
         assert isinstance(self.algo, TrainerMixin), "algo should be an instance of TrainerMixin"
-        if self.resume_path is not None:
+        if self.resume and self.resume_path is not None:
             self.load_checkpoint(self.resume_path)
 
-    def _init_workspace(self, seed, training_cfg, output_dir=None, debugrun=False, 
-                        resume_path = None,
-                        **kwargs):
-        super()._init_workspace(seed, output_dir, debugrun, **kwargs)
-        self.training_config = training_cfg
+    def _init_workspace(self, **cfg):
+        super()._init_workspace(**cfg)
+        self.training_config = cfg["training_cfg"]
         # setting up the training
         # set best losses for early stopping
         self.epoch = 1
         self.best_train_loss = 1e10
         self.best_eval_loss = 1e10
-        self.resume_path = resume_path
-        if self.resume_path is not None:
-            self.resume = True
-        if self.output_dir is not None:
-            os.makedirs(self.output_dir, exist_ok=True)
+
 
     def save_checkpoint(self, filepath):
         """Saves a checkpoint alowing to restart training from here

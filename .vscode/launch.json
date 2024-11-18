@@ -66,7 +66,8 @@
           "type": "pickString",
           "description": "hydra config file to process",
           "options": ["imitation_learning_robomimic_act",
-                      "imitation_learning_robomimic_diffusion"],
+                      "imitation_learning_robomimic_diffusion",
+                      "imitation_learning_faive"],
           "default": "train_embed_vq_act"
         },
         {
