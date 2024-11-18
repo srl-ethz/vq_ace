@@ -38,7 +38,17 @@ def get_policy_from_ckpt(ckpt_path, full = False):
         ```
     """
     model_dir = os.path.dirname(ckpt_path)
-    config_path=os.path.join(model_dir, "config.yaml")
+    # First, check in the model_dir
+    config_path = os.path.join(model_dir, "config.yaml")
+    if not os.path.exists(config_path):
+        # If not found, check in the parent directory
+        config_path = os.path.join(os.path.dirname(model_dir), "config.yaml")
+        if not os.path.exists(config_path):
+            # Raise an error if config.yaml is not found in either location
+            raise FileNotFoundError(
+                "config.yaml not found in model directory or its parent directory"
+            )
+    print("Loading config from", config_path)
     cfg = OmegaConf.load(config_path)
     cfg.resume_path=ckpt_path
     cfg.resume=True
