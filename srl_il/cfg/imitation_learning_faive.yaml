@@ -6,7 +6,7 @@ batch_size: 32
 seed: 43
 debugrun: false
 wandb_cfg:
-  project: robomimic
+  project: faive
   run_name: ${now:%Y%m%d-%H%M%S}_${.project}
   tags: ["test", "act"]
   mode: "online"
