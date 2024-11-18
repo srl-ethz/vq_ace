@@ -6,8 +6,8 @@ import hydra
 from copy import deepcopy
 from typing import Any, Dict, List, Optional
 from ..algo.base_algo import Algo, TrainerMixin
-from .pipeline_base import Pipeline, AlgoMixin, WandbMixin, DatasetMixin, Lr_SchedulerMixin, NormalizationMixin, SimulationEnvMixin
-from .mujoco_visulizer import MujocoVisualizerMixin
+from .pipeline_base import Pipeline, AlgoMixin, WandbMixin, DatasetMixin, Lr_SchedulerMixin, NormalizationMixin
+from .vis_mixins.env_rollout_mixin import SimulationEnvMixin
 from .data_augmentation import DataAugmentationMixin
 
 import torch

@@ -9,7 +9,7 @@ from copy import deepcopy
 from typing import Any, Dict, List, Optional
 from ..algo.base_algo import Algo, TrainerMixin
 from .pipeline_base import Pipeline, AlgoMixin, WandbMixin, DatasetMixin, Lr_SchedulerMixin, NormalizationMixin
-from .mujoco_visulizer import MujocoVisualizerMixin
+from .vis_mixins.mujoco_visulizer import MujocoVisualizerMixin
 from .data_augmentation import DataAugmentationMixin
 
 import torch

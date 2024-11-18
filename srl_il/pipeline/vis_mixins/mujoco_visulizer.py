@@ -2,7 +2,7 @@ import mujoco
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from abc import ABC, abstractmethod
-from ..common.autoinit_class import AutoInit
+from ...common.autoinit_class import AutoInit
 import hydra
 import torch 
 from PIL import Image
