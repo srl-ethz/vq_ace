@@ -52,7 +52,6 @@ def get_policy_from_ckpt(ckpt_path, full = False):
     cfg = OmegaConf.load(config_path)
     cfg.resume_path=ckpt_path
     cfg.resume=True
-    print(cfg)
     pipeline = PolicyExporter(**cfg)
 
     algo = pipeline.algo

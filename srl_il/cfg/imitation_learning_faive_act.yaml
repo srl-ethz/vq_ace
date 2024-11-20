@@ -23,8 +23,11 @@ dataset_cfg:
     val_fraction: 0.1
     window_size_train: 21 
     window_size_test: 21
-    keys_traj:  [['actions', 'actions', 1, null],  # use the first frame as the observation
-              ['qpos', 'qpos', 0, 2],  
+    keys_traj:  [
+              ['actions_hand', 'actions_hand', 1, null],  # use the first frame as the observation
+              ['actions_franka', 'actions_franka', 1, null],  # use the first frame as the observation
+              ['qpos_hand', 'qpos_hand', 0, 2],  
+              ['qpos_franka', 'qpos_franka', 0, 2],  
               ['oakd_front_view_images', 'oakd_front_view_images', 1, 2],  
             ] 
     keys_global: []
@@ -42,7 +45,7 @@ algo_cfg:
   algo_cfg:
     device: cuda
     target_dims: 
-      actions: 22
+      actions_franka: 7
     z_dim: 32
     T_target: 20
     T_z: 1
@@ -87,10 +90,10 @@ algo_cfg:
     output_dim: 256
     obs_groups_cfg:
       qpos:
-        datakeys: ['qpos']
+        datakeys: ['qpos_franka']
         encoder_cfg:
           type: lowdim_concat
-          input_dim_total: 22
+          input_dim_total: 7
         posemb_cfg:
           type: none
       oakd_front_view_images:
@@ -106,7 +109,7 @@ algo_cfg:
   policy_cfg: 
     policy_bs: 1
     policy_obs_list: # policy names and temporal length
-      - ['qpos', 2]
+      - ['qpos_franka', 2]
       - ['oakd_front_view_images', 2]
 
 
@@ -142,13 +145,20 @@ training_cfg:
 
 
 normalizer_cfg:
-  actions: # the target to reconstruct
+  actions_franka: # the target to reconstruct
     type: dataset_stats
     min_max: true
-    dataname: actions
-  qpos:
+    dataname: actions_franka
+  actions_hand: # the target to reconstruct
     type: dataset_stats
-    dataname: qpos
+    min_max: true
+    dataname: actions_hand
+  qpos_franka:
+    type: dataset_stats
+    dataname: qpos_franka
+  qpos_hand:
+    type: dataset_stats
+    dataname: qpos_hand
   oakd_front_view_images: # image net norm mean = [0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     type: hardcode
     mean: [[[0.485]], [[0.456]], [[0.406]]]
@@ -156,7 +166,7 @@ normalizer_cfg:
 
 data_augmentation_cfg: # data augmetation is only used for the data loaded from dataset, no simulation data augmentation
   data_augments:
-    - outname: qpos
+    - outname: qpos_franka
       type: gaussian_noise
       mean: 0.0
       std: 0.01
