@@ -107,7 +107,7 @@ n_latency_steps: 0
 
 ### Check your dataset
 
-Take a look at `scripts/dataset_check.py`, run it. It samples some batches from dataloader, and save the plots and gifs of the data into the run directory.
+Take a look at `scripts/dataset_check.py`, run it with the same config file you use for tranining. It samples some batches from dataloader, and save the plots and gifs of the data into the run directory.
 
 
 ## Key Components
