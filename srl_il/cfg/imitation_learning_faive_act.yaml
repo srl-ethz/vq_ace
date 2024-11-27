@@ -2,7 +2,7 @@ defaults:
   # presets do not directly configs the pipeline or the algothm. However it provides necessary information to resolve this config
   - _self_
 
-batch_size: 32
+batch_size: 128
 seed: 43
 debugrun: false
 wandb_cfg:
@@ -18,16 +18,28 @@ pipeline:
 dataset_cfg:
   data:
     _target_: srl_il.dataset.faive_dataset.faive_train_val_test
-    data_directory: /home/chenyu/Data/srl/ampute_push
+    data_directory: /media/chenyu/ycyT7/recordings/cube_relocation_processed
     test_fraction: 0.1
     val_fraction: 0.1
-    window_size_train: 21 
-    window_size_test: 21
-    keys_traj:  [['actions', 'actions', 1, null],  # use the first frame as the observation
-              ['qpos', 'qpos', 0, 2],  
-              ['oakd_front_view_images', 'oakd_front_view_images', 1, 2],  
+    window_size_train: 20
+    window_size_test: 20
+    keys_traj:  [
+              ['actions_franka', 'actions_franka', 0, null],  # use the first frame as the observation
+              ['actions_hand', 'actions_hand', 0, null],  # use the first frame as the observation
+              ['qpos_franka', 'qpos_franka', 0, 1],  
+              ['qpos_hand', 'qpos_hand', 0, 1],  
+              ['oakd_front_view_images', 'oakd_front_view/color', 0, 1],  
+              ['oakd_side_view_images', 'oakd_side_view/color', 0, 1],  
             ] 
-    keys_global: []
+    keys_global: [
+      # 'oakd_front_view/extrinsics',
+      # 'oakd_front_view/intrinsics',
+      # 'oakd_front_view/projection',
+      # 'oakd_side_view/extrinsics',
+      # 'oakd_side_view/intrinsics',
+      # 'oakd_side_view/projection',
+      # 'task_description'
+    ]
     pad_before: false
     pad_after: true
     pad_type: 'near'
@@ -42,14 +54,15 @@ algo_cfg:
   algo_cfg:
     device: cuda
     target_dims: 
-      actions: 22
+      actions_franka: 7
+      actions_hand: 16
     z_dim: 32
     T_target: 20
     T_z: 1
     encoder_is_causal: false
     decoder_is_causal: true
     encoder_group_keys: ['qpos']
-    decoder_group_keys: ['qpos', 'oakd_front_view_images']
+    decoder_group_keys: ['qpos', 'oakd_front_view_images', 'oakd_side_view_images']
     encoder_cfg:
       d_model: 256
       nhead: 8
@@ -87,16 +100,27 @@ algo_cfg:
     output_dim: 256
     obs_groups_cfg:
       qpos:
-        datakeys: ['qpos']
+        datakeys: ['qpos_franka', 'qpos_hand']
         encoder_cfg:
           type: lowdim_concat
-          input_dim_total: 22
+          input_dim_total: 23
         posemb_cfg:
           type: none
       oakd_front_view_images:
         datakeys: ['oakd_front_view_images']
         encoder_cfg:
-          type: resnet18 # crop_resnet18
+          type: crop_resnet18
+          resize_shape: [270, 480]
+          crop_shape: [224, 352]
+          pretrained: true
+        posemb_cfg:
+          type: none
+      oakd_side_view_images:
+        datakeys: ['oakd_side_view_images']
+        encoder_cfg:
+          type:  crop_resnet18
+          resize_shape: [270, 480]
+          crop_shape: [224, 352]
           pretrained: true
         posemb_cfg:
           type: none
@@ -106,8 +130,10 @@ algo_cfg:
   policy_cfg: 
     policy_bs: 1
     policy_obs_list: # policy names and temporal length
-      - ['qpos', 2]
+      - ['qpos_franka', 1]
+      - ['qpos_hand', 1]
       - ['oakd_front_view_images', 2]
+      - ['oakd_side_view_images', 2]
 
 
 lr_scheduler_cfg:
@@ -142,21 +168,32 @@ training_cfg:
 
 
 normalizer_cfg:
-  actions: # the target to reconstruct
+  actions_franka: # the target to reconstruct
     type: dataset_stats
     min_max: true
-    dataname: actions
-  qpos:
+    dataname: actions_franka
+  actions_hand: # the target to reconstruct
     type: dataset_stats
-    dataname: qpos
+    min_max: true
+    dataname: actions_hand
+  qpos_franka:
+    type: dataset_stats
+    dataname: qpos_franka
+  qpos_hand:
+    type: dataset_stats
+    dataname: qpos_hand
   oakd_front_view_images: # image net norm mean = [0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    type: hardcode
+    mean: [[[0.485]], [[0.456]], [[0.406]]]
+    std: [[[0.229]], [[0.224]], [[0.225]]]
+  oakd_side_view_images: # image net norm mean = [0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     type: hardcode
     mean: [[[0.485]], [[0.456]], [[0.406]]]
     std: [[[0.229]], [[0.224]], [[0.225]]]
 
 data_augmentation_cfg: # data augmetation is only used for the data loaded from dataset, no simulation data augmentation
   data_augments:
-    - outname: qpos
+    - outname: qpos_hand
       type: gaussian_noise
       mean: 0.0
       std: 0.01
