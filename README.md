@@ -89,6 +89,21 @@ This part can be best explained with examples
 ```
 In this example, the trajectory will be cutted into slices with length 21. However, not all steps in these slices are need for a traning. So these two indexes in `kyes_traj` specifies which portion of the slice is loaded. In the example, the dataloader loads the second `agentview_image` and `robot0_eye_in_hand_image` in the window, loads the first `robot0_eef_pos` of the first two timesteps, and load the action sequence starting from the second one.
 
+The syntax of the `keys_traj` is `<name>, <src name>, <start idx>, <end idx>`. The example above is equivalent to constructing a batch as
+
+```python
+for i in range(xxx):
+    traj_window = {} # a slice of the whole trajectory
+    for k in traj_data.keys():
+        traj_window[k] = traj_data[k][i: i+21]
+    batch = {
+        "img0" : traj_window["agentview_image"][1:2],
+        "img1" : traj_window["robot0_eye_in_hand_image"][1:2],
+        "robot0_eef_pos" : traj_window["robot0_eef_pos"][:2],
+        "actions" : traj_window["actions"][1:],
+    }
+```
+
 So the dataloader returns dict with the following keys and shapes.
 - `img0`: `(B, 1, C, H, W)`
 - `img1`: `(B, 1, C, H, W)`
