@@ -124,8 +124,8 @@ class TemporalAggregationBuffer:
     def __init__(self, batch_size, data_shape, chunk_length, max_timesteps, device):
         """
         Initialize the temporal aggregation buffer.
-        When appending data, the data writes to buffer[t, t:t+chunk_length].
-        When retrieve data, the data reads from buffer[t-chunk_length:t, t-1]. (note always retrieve after appending)
+        When appending data, the data writes to buffer[k, t:t+chunk_length].
+        When retrieve data, the data reads from buffer[k-chunk_length:k, t]. 
         Args:
             data_shape (tuple): Shape of the data excluding the time dimensions (e.g., (ac_dim)).
             chunk_length (int): Length of the chunks (e.g., chunk_size).
@@ -147,27 +147,40 @@ class TemporalAggregationBuffer:
         """Reset the buffer to its initial state."""
         self.mask.zero_()
         self.buffer.zero_()
-        self.timeidx = 0
+        self.timeidx = 0 # t
+        self.dataidx = 0 # k
     
     def reset_idx(self, idx):
         """Reset the buffer to its initial state."""
         self.mask[idx, ...].zero_()
 
-    def append(self, data):
-        """
-        Append data at the current time step.
-        Args:
-            data (torch.Tensor): Tensor of shape [batch_size, chunk_length, *data_shape].
-        """
+    def set_top(self, data):
         t = self.timeidx
+        k = self.dataidx
         # Ensure actions have the correct shape
         assert data.shape == tuple([self.batch_size, self.chunk_length] + list(self.buffer.shape[3:])), \
             f"Expected data of shape {[self.batch_size, self.chunk_length] + list(self.buffer.shape[3:])}, got {data.shape}"
 
         # Store data at position [t, t:t+chunk_length]
-        self.buffer[:, t, t:t+self.chunk_length, ...] = data
-        self.mask[:, t, t:t+self.chunk_length] = True
+        self.buffer[:, k, t:t+self.chunk_length, ...] = data
+        self.mask[:, k, t:t+self.chunk_length] = True
+        self.dataidx += 1
+        if self.dataidx >= self.max_timesteps:
+            self._rollback()
 
+    def push(self, data):
+        """
+        Append data at the current time step.
+        Args:
+            data (torch.Tensor): Tensor of shape [batch_size, chunk_length, *data_shape].
+        """
+        self.set_top(data)
+        self.step_t()
+
+    def step_t(self):
+        """
+        Move the time index to the next time step.
+        """
         self.timeidx += 1
         if self.timeidx >= self.max_timesteps:
             self._rollback()
@@ -176,21 +189,22 @@ class TemporalAggregationBuffer:
         """
         move the time_idx to chunk_size. And together the buffer[t-chunk_length:t, t-1:t+chunk_length-1] to buffer[0:chunk_length,chunk_length:2*chunk_length]
         """
-        self.buffer[:, 
-                0 : self.chunk_length, 
-                self.chunk_length-1 : 2*self.chunk_length-1, 
-            ...] = self.buffer[:, 
-                self.timeidx-self.chunk_length : self.timeidx, 
-                self.timeidx-1 : self.timeidx+self.chunk_length-1, 
-            ...]
-        self.mask[:, 
-                0 : self.chunk_length, 
-                self.chunk_length-1 : 2*self.chunk_length-1
-            ] = self.mask[:, 
-                self.timeidx-self.chunk_length : self.timeidx, 
-                self.timeidx-1 : self.timeidx+self.chunk_length-1
-            ]
-        self.timeidx = self.chunk_length
+        if self.dataidx >= self.chunk_length:
+            new_dataidx = self.chunk_length
+            dim1_tgt = slice(0, self.chunk_length)
+            dim1_src = slice(self.dataidx-self.chunk_length, self.dataidx)
+        else:
+            new_dataidx = self.dataidx
+            dim1_tgt = slice(0, self.dataidx)
+            dim1_src = slice(0, self.dataidx)
+        dim2_tgt = slice(0, self.chunk_length)
+        dim2_src = slice(self.timeidx, self.timeidx + self.chunk_length)
+
+        self.buffer[:, dim1_tgt, dim2_tgt, ...] = self.buffer[:, dim1_src, dim2_src, ...]
+        self.mask[:, dim1_tgt, dim2_tgt] = self.mask[:, dim1_src, dim2_src]
+
+        self.dataidx = new_dataidx
+        self.timeidx = 0
 
     def get_top(self):
         """
@@ -200,9 +214,14 @@ class TemporalAggregationBuffer:
             torch.Tensor: Mask of shape [batch_size, chunk_length].
         """
         t = self.timeidx
+        k = self.dataidx
         slice_dim1 = slice(
-            max(t-self.chunk_length, 0), t)
-        data = self.buffer[:, slice_dim1, t-1, ...]
-        mask = self.mask[:, slice_dim1, t-1]
+            max(k-self.chunk_length, 0), k)
+        data = self.buffer[:, slice_dim1, t, ...]
+        mask = self.mask[:, slice_dim1, t]
         return data, mask
 
+    def pop(self):
+        res = self.get_top()
+        self.step_t()
+        return res

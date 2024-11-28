@@ -10,7 +10,6 @@ from ..models.common.transformer import MIMO_Transformer
 from ..models.common.position_encoding import PositionEncodingSineTable, SinusoidalTimeStepEmb, PositionEmbeddingSineSeq 
 from torch.autograd import Variable
 from ..models.common.vector_quantizer import VectorQuantizerEMA
-from ..common.chunk_buffer import TemporalAggregationBuffer
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
 class Diffusion(Algo, ObsEncoderMixin):
@@ -148,28 +147,16 @@ class Diffusion(Algo, ObsEncoderMixin):
         return target_dict
 
 class DiffusionPolicy(Diffusion, PolicyMixin):
-    def _init_policy(self, policy_bs, policy_obs_list, update_freq, policy_translator=None):
-        super()._init_policy(policy_bs, policy_obs_list, policy_translator)
-        self._poilcy_update_freq = update_freq
-
-    def reset_policy(self):
-        """
-        Reset algo state to prepare for environment rollouts.
-        """
-        super().reset_policy()
-        self._policy_step_cnt = self._poilcy_update_freq + 1
-        self._policy_action = None
-        
-    def predict_action(self, obs_dict):
-        if self._policy_step_cnt >=self._poilcy_update_freq:
+    def predict_action(self, obs_dict):        
+        if self._policy_step_cnt == 0:
             with torch.no_grad():
                 obs_dict, mask_batch = self._get_policy_observation(obs_dict)
                 policy_output = self.denoise(obs_dict, mask_batch)
-                self._policy_action = self._translate_policy_output(policy_output, obs_dict)
-            self._policy_step_cnt = 0
-        ret = self._policy_action[:, self._policy_step_cnt] 
-        self._policy_step_cnt += 1
-        return ret
+                self._policy_aggregator.push(policy_output)
+        self._policy_step_cnt = (self._policy_step_cnt + 1) % self._policy_update_every
+        policy_output_step = self._policy_aggregator.step()
+        policy_action = self._translate_policy_output(policy_output_step, obs_dict)
+        return policy_action
 
 
 class DiffusionPolicyTrainer(DiffusionPolicy, TrainerMixin):

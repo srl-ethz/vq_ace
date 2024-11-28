@@ -148,8 +148,9 @@ class TestTemporalAggregationBuffer(unittest.TestCase):
             
             
             # Append data
-            buffer.append(data)
+            buffer.set_top(data)
             retrieved_data, retrieved_mask = buffer.get_top()
+            buffer.step_t()
 
             # Compute expected data and mask
             # Expected data: the data from buffer at positions [t - chunk_length : t] along time dimension
@@ -199,18 +200,69 @@ class TestTemporalAggregationBuffer(unittest.TestCase):
         data0 = torch.rand((batch_size, chunk_length, *data_shape),  dtype=torch.float32, device=device)
         data1 = torch.rand((batch_size, chunk_length, *data_shape),  dtype=torch.float32, device=device)
         data2 = torch.rand((batch_size, chunk_length, *data_shape),  dtype=torch.float32, device=device)
-        buffer.append(data0)
-        buffer.append(data1)
+        buffer.set_top(data0)
+        buffer.step_t()
+        buffer.set_top(data1)
         data, mask = buffer.get_top()
+        buffer.step_t()
         ground_truth_data = torch.stack([data0[:,1,:,:], data1[:,0,:,:]], dim=1)
         self.assertTrue(torch.equal(data, ground_truth_data), "Data does not match expected data")
         self.assertTrue(torch.equal(mask, torch.ones_like(mask)), "Mask does not match expected mask")
         buffer.reset_idx(0)
-        buffer.append(data2)
+        buffer.set_top(data2)
         data, mask = buffer.get_top()
+        buffer.step_t()
         self.assertTrue(mask[1,:].all(), "Mask does not match expected mask") # all mask for batch 1 should be True
         self.assertTrue(mask[0,1].all(), "Mask does not match expected mask") # the new mask for batch 0 should be True
         self.assertTrue((~mask[0,0]).all(), "Mask does not match expected mask") # the old mask for batch 0 is False
+
+    def test_multi_steps(self):
+        batch_size = 1
+        data_shape = (1,)
+        chunk_length = 4
+        max_timesteps = 8
+        device = torch.device('cpu')
+        buffer = TemporalAggregationBuffer(
+            batch_size=batch_size,
+            data_shape=data_shape,
+            chunk_length=chunk_length,
+            max_timesteps=max_timesteps,
+            device=device
+        )
+        data0 = torch.rand((batch_size, chunk_length, *data_shape),  dtype=torch.float32, device=device)
+        data1 = torch.rand((batch_size, chunk_length, *data_shape),  dtype=torch.float32, device=device)
+        data2 = torch.rand((batch_size, chunk_length, *data_shape),  dtype=torch.float32, device=device)
+        data3 = torch.rand((batch_size, chunk_length, *data_shape),  dtype=torch.float32, device=device)
+        data4 = torch.rand((batch_size, chunk_length, *data_shape),  dtype=torch.float32, device=device)
+
+        buffer.set_top(data0)
+        buffer.step_t()
+        buffer.set_top(data1)
+        data, mask = buffer.get_top()
+        ground_truth_data = torch.stack([data0[:,1], data1[:,0]], dim=1)
+        self.assertTrue(torch.equal(data, ground_truth_data), "Data does not match expected data")
+        self.assertTrue(torch.equal(mask, torch.ones_like(mask)), "Mask does not match expected mask")
+        buffer.step_t()
+        buffer.step_t()
+        buffer.set_top(data2)
+        data, mask = buffer.get_top()
+        ground_truth_data = torch.stack([data0[:,3], data1[:,2], data2[:,0]], dim=1)
+        self.assertTrue(torch.equal(data, ground_truth_data), "Data does not match expected data")
+        self.assertTrue(torch.equal(mask, torch.ones_like(mask)), "Mask does not match expected mask")
+        buffer.step_t()
+        buffer.step_t()
+        buffer.set_top(data3)
+        data, mask = buffer.get_top()
+        ground_truth_data = torch.stack([data2[:,2], data3[:,0]], dim=1)
+        self.assertTrue(torch.equal(data[mask], ground_truth_data[0]), "Data does not match expected data")
+        buffer._rollback()
+        buffer.step_t()
+        buffer.step_t()
+        buffer.set_top(data4)
+        data, mask = buffer.get_top()
+        ground_truth_data = torch.stack([data3[:,2], data4[:,0]], dim=1)
+        self.assertTrue(torch.equal(data[mask], ground_truth_data[0]), "Data does not match expected data")
+
 
 if __name__ == '__main__':
     unittest.main()

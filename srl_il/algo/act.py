@@ -15,62 +15,22 @@ import uuid
 import os
 from torch.autograd import Variable
 from ..models.common.vector_quantizer import VectorQuantizerEMA
-from ..common.chunk_buffer import TemporalAggregationBuffer
 
 class ActionChunkingPolicyMixin(PolicyMixin):
-
-    def _init_policy(self, policy_bs, policy_obs_list, k=0.01, policy_translator=None):
-        """
-        policy_bs: batch size of the policy
-        policy_obs_list: list of observation spaces, used for wrapping the history buffer.
-            tuple of (name, length) where name is the name of the observation and length is the length of the history buffer.
-        k: the exponential decay factor for the temporal aggregation buffer
-        """
-        super()._init_policy(policy_bs, policy_obs_list, policy_translator)
-        self._policy_temporal_aggregation_k = k
-
-    def reset_policy(self):
-        """
-        Reset algo state to prepare for environment rollouts.
-        """
-        super().reset_policy()
-        self._policy_temporal_aggregation_buffer = None
-
-    def reset_policy_idx(self, idx):
-        """
-        Reset algo state to prepare for environment rollouts.
-        """
-        super().reset_policy_idx(idx)
-        self._policy_temporal_aggregation_buffer.reset_idx(idx)
-
     def predict_action(self, obs_dict):
         """
         Compute the action to take in the current state.
         """
-        with torch.no_grad():
-            obs_dict, mask_batch = self._get_policy_observation(obs_dict)
-            z = torch.zeros((self._policy_bs, self.T_z, self.z_dim), device=self.device)
-            output =  self.decode(z, obs_dict, mask_batch)
-            action_chunk = self._translate_policy_output(output)
-
-            if self._policy_temporal_aggregation_buffer is None:
-                self._policy_temporal_aggregation_buffer = TemporalAggregationBuffer(
-                    self._policy_bs,
-                    (action_chunk.shape[2],),
-                    self.T_target,
-                    max_timesteps=200,
-                    device=self.device
-                )
-            self._policy_temporal_aggregation_buffer.append(action_chunk)
-            actions_for_curr_step, mask = self._policy_temporal_aggregation_buffer.get_top() # batch, T, a_dim
-            k = self._policy_temporal_aggregation_k
-            n_preds = mask.shape[1]
-            exp_weights = torch.exp(-k * torch.arange(n_preds, 0, -1)).unsqueeze(dim=0).repeat(self._policy_bs, 1).to(self.device)
-            exp_weights = exp_weights * mask
-            exp_weights = exp_weights / exp_weights.sum(dim=1, keepdim=True)
-            exp_weights = exp_weights.unsqueeze(dim=2)
-            action = (actions_for_curr_step * exp_weights).sum(dim=1)
-        return action
+        if self._policy_step_cnt == 0:
+            with torch.no_grad():
+                obs_dict, mask_batch = self._get_policy_observation(obs_dict)
+                z = torch.zeros((self._policy_bs, self.T_z, self.z_dim), device=self.device)
+                output =  self.decode(z, obs_dict, mask_batch)
+                self._policy_aggregator.push(output)
+        self._policy_step_cnt = (self._policy_step_cnt + 1) % self._policy_update_every
+        policy_output_step = self._policy_aggregator.step()
+        policy_action = self._translate_policy_output(policy_output_step, obs_dict)
+        return policy_action
 
 class ACT(Algo, ObsEncoderMixin):
     """
