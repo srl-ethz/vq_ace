@@ -116,7 +116,7 @@ class ImitationLearningPipeline(Pipeline, AlgoMixin, DatasetMixin, Lr_SchedulerM
                     mask_batch = {k: v[:num_samples].to(self.algo.device) for k, v in mask_batch.items()}
                     predicted_actions = self.algo.reconstruct(batch, mask_batch)
                     image_paths = self.visualize(batch, predicted_actions, epoch)
-                    wandb.log({k: wandb.Image(v) for k, v in image_paths.items()})
+                    wandb.log({k: wandb.Video(v) for k, v in image_paths.items()})
                     
 
             epoch_train_loss = metrics["train_epoch_loss"]

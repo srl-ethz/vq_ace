@@ -2,7 +2,7 @@ defaults:
   # presets do not directly configs the pipeline or the algothm. However it provides necessary information to resolve this config
   - _self_
 
-batch_size: 128
+batch_size: 100
 seed: 43
 debugrun: false
 wandb_cfg:
@@ -166,7 +166,7 @@ lr_scheduler_cfg:
 
 training_cfg:
   num_epochs: 500
-  num_steps_per_epoch: 200
+  num_steps_per_epoch: 100
   steps_saving: 10
   rollout:
     enabled: false
@@ -174,7 +174,7 @@ training_cfg:
   visualization:
     enabled: true
     num_samples: 5
-    every_n_epoch: 1
+    every_n_epoch: 10
 
 
 
