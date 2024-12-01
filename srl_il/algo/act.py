@@ -332,7 +332,16 @@ class ACTTrainerMixin(TrainerMixin):
 
     def _compute_losses(self, batch, mask_batch):
         # set the target mask to true where all the target is valid
-        reconstruct, target_mask, mu, logvar = self.predict_reconstructed_chunk(batch, mask_batch)
+        target_mask = mask_batch[list(self.target_dims.keys())[0]] #(batch_size, T_target) 1 means valid, 0 means padded
+        for key in list(self.target_dims.keys())[1:]:
+            target_mask = target_mask * mask_batch[key]
+        act_encoder_out = self.encode(batch, mask_batch, target_mask)
+        mu = act_encoder_out['mu'] # (batch, T_z, z_dim)
+        logvar = act_encoder_out['logvar'] # (batch, T_z, z_dim)
+        latent_sample = reparametrize(mu, logvar)
+
+        reconstruct = self.decode(latent_sample, batch, mask_batch)
+
         loss_dict = dict()
         # the loss is averaged over the batch
         klds = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp())
@@ -350,21 +359,6 @@ class ACTTrainerMixin(TrainerMixin):
             total_loss += l1
         
         return total_loss, loss_dict
-    
-    def predict_reconstructed_chunk(self, batch, mask_batch):
-        batch = {k: v.to(self.device) for k, v in batch.items()}
-        mask_batch = {k: v.to(self.device) for k, v in mask_batch.items()}
-
-        target_mask = mask_batch[list(self.target_dims.keys())[0]] #(batch_size, T_target) 1 means valid, 0 means padded
-        for key in list(self.target_dims.keys())[1:]:
-            target_mask = target_mask * mask_batch[key]
-        act_encoder_out = self.encode(batch, mask_batch, target_mask)
-        mu = act_encoder_out['mu'] # (batch, T_z, z_dim)
-        logvar = act_encoder_out['logvar'] # (batch, T_z, z_dim)
-        latent_sample = reparametrize(mu, logvar)
-
-        reconstruct = self.decode(latent_sample, batch, mask_batch)
-        return reconstruct, target_mask, mu, logvar
 
     def train_step(self, batch, epoch=None):
         """

@@ -174,7 +174,6 @@ training_cfg:
   visualization:
     enabled: true
     num_samples: 5
-    save_dir: ${output_dir}/visualization
     every_n_epoch: 1
 
 
@@ -212,7 +211,12 @@ data_augmentation_cfg: # data augmetation is only used for the data loaded from 
 
 
 sim_env_cfg: {}
-    
+  
+projection_visualizer_cfg:
+  pose_key: 'actions_franka'
+  img_views: # (img_name, img_key, extrinsics_key, intrinsics_key)
+  - ["front", "oakd_front_view_images", "oakd_front_view/extrinsics", "oakd_front_view/intrinsics"]
+  - ["side", "oakd_side_view_images", "oakd_side_view/extrinsics", "oakd_side_view/intrinsics"]
  
 # set the directory where the output files get saved
 hydra:
