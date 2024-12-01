@@ -2,7 +2,7 @@ defaults:
   # presets do not directly configs the pipeline or the algothm. However it provides necessary information to resolve this config
   - _self_
 
-batch_size: 128
+batch_size: 100
 seed: 43
 debugrun: false
 wandb_cfg:
@@ -32,12 +32,12 @@ dataset_cfg:
               ['oakd_side_view_images', 'oakd_side_view/color', 0, 1],  
             ] 
     keys_global: [
-      # 'oakd_front_view/extrinsics',
-      # 'oakd_front_view/intrinsics',
-      # 'oakd_front_view/projection',
-      # 'oakd_side_view/extrinsics',
-      # 'oakd_side_view/intrinsics',
-      # 'oakd_side_view/projection',
+      'oakd_front_view/extrinsics',
+      'oakd_front_view/intrinsics',
+      'oakd_front_view/projection',
+      'oakd_side_view/extrinsics',
+      'oakd_side_view/intrinsics',
+      'oakd_side_view/projection',
       # 'task_description'
     ]
     pad_before: false
@@ -166,10 +166,16 @@ lr_scheduler_cfg:
 
 training_cfg:
   num_epochs: 500
-  num_steps_per_epoch: 200
+  num_steps_per_epoch: 100
   steps_saving: 10
   rollout:
     enabled: false
+
+  visualization:
+    enabled: true
+    num_samples: 5
+    every_n_epoch: 10
+
 
 
 normalizer_cfg:
@@ -205,7 +211,12 @@ data_augmentation_cfg: # data augmetation is only used for the data loaded from 
 
 
 sim_env_cfg: {}
-    
+  
+projection_visualizer_cfg:
+  pose_key: 'actions_franka'
+  img_views: # (img_name, img_key, extrinsics_key, intrinsics_key)
+  - ["front", "oakd_front_view_images", "oakd_front_view/extrinsics", "oakd_front_view/intrinsics"]
+  - ["side", "oakd_side_view_images", "oakd_side_view/extrinsics", "oakd_side_view/intrinsics"]
  
 # set the directory where the output files get saved
 hydra:

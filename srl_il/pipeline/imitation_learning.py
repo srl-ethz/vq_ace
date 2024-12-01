@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from ..algo.base_algo import Algo, TrainerMixin
 from .pipeline_base import Pipeline, AlgoMixin, WandbMixin, DatasetMixin, Lr_SchedulerMixin, NormalizationMixin
 from .vis_mixins.env_rollout_mixin import SimulationEnvMixin
+from .vis_mixins.visualize_projected_actions import ActionProjectorMixin
 from .data_augmentation import DataAugmentationMixin
 
 import torch
@@ -19,7 +20,7 @@ import wandb
 import json
 
 
-class ImitationLearningPipeline(Pipeline, AlgoMixin, DatasetMixin, Lr_SchedulerMixin, WandbMixin, DataAugmentationMixin, NormalizationMixin, SimulationEnvMixin):
+class ImitationLearningPipeline(Pipeline, AlgoMixin, DatasetMixin, Lr_SchedulerMixin, WandbMixin, DataAugmentationMixin, NormalizationMixin, SimulationEnvMixin, ActionProjectorMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert isinstance(self.algo, Algo), "algo should be an instance of Algo"
@@ -91,6 +92,7 @@ class ImitationLearningPipeline(Pipeline, AlgoMixin, DatasetMixin, Lr_SchedulerM
                 except StopIteration:
                     train_loader_iter = iter(self.train_loader)
                     inputs = next(train_loader_iter)
+                
                 batch, mask_batch = inputs
                 batch, mask_batch = self.data_augmentation_train(batch, mask_batch)
                 self.algo.train_step((batch, mask_batch), epoch)
@@ -107,7 +109,16 @@ class ImitationLearningPipeline(Pipeline, AlgoMixin, DatasetMixin, Lr_SchedulerM
                     self.algo.eval_step((batch, mask_batch), epoch)
                 eval_metrics = self.algo.eval_epoch_end(epoch)
                 metrics.update(eval_metrics)
-            
+                if "visualization" in self.training_config.keys() and self.training_config.visualization.enabled and epoch % self.training_config.visualization.every_n_epoch == 0:
+                    num_samples = self.training_config.visualization.num_samples
+                    batch, mask_batch = next(iter(self.eval_loader))
+                    batch = {k: v[:num_samples].to(self.algo.device) for k, v in batch.items()}
+                    mask_batch = {k: v[:num_samples].to(self.algo.device) for k, v in mask_batch.items()}
+                    predicted_actions = self.algo.reconstruct(batch, mask_batch)
+                    image_paths = self.visualize(batch, predicted_actions, epoch)
+                    wandb.log({k: wandb.Video(v) for k, v in image_paths.items()})
+                    
+
             epoch_train_loss = metrics["train_epoch_loss"]
             epoch_eval_loss = metrics.get("eval_epoch_loss", epoch_train_loss)
 

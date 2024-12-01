@@ -207,7 +207,8 @@ data_augmentation_cfg: # data augmetation is only used for the data loaded from 
 
 sim_env_cfg:
   env: ${preset_robomimic.env}
-    
+
+projection_visualizer_cfg: {}
  
 # set the directory where the output files get saved
 hydra:
