@@ -1,5 +1,8 @@
 __pycache__
 outputs
 *.egg-info
+*.log
 wandb
 runs
+Data
+.vscode/settings.json

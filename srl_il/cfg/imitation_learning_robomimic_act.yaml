@@ -117,6 +117,12 @@ algo_cfg:
       - ['robot0_gripper_qpos', 1]
       - ['img0', 1] 
       - ['img1', 1]
+    policy_translator: 
+      _target_: srl_il.algo.base_algo.PolicyTranslatorDirect
+    policy_aggregator_cfg:
+      type: "temporal_aggr"
+      update_every: 1
+      k: 0.01
 
 lr_scheduler_cfg:
   act_encoder:
