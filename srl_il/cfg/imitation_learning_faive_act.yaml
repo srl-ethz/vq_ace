@@ -18,7 +18,7 @@ pipeline:
 dataset_cfg:
   data:
     _target_: srl_il.dataset.faive_dataset.faive_train_val_test
-    data_directory: /media/chenyu/ycyT7/recordings/cube_relocation_processed
+    data_directory: /home/davide/srl_il/datasets/cube_relocation_processed_corrected
     test_fraction: 0.1
     val_fraction: 0.1
     window_size_train: 20
@@ -32,12 +32,12 @@ dataset_cfg:
               ['oakd_side_view_images', 'oakd_side_view/color', 0, 1],  
             ] 
     keys_global: [
-      # 'oakd_front_view/extrinsics',
-      # 'oakd_front_view/intrinsics',
-      # 'oakd_front_view/projection',
-      # 'oakd_side_view/extrinsics',
-      # 'oakd_side_view/intrinsics',
-      # 'oakd_side_view/projection',
+      'oakd_front_view/extrinsics',
+      'oakd_front_view/intrinsics',
+      'oakd_front_view/projection',
+      'oakd_side_view/extrinsics',
+      'oakd_side_view/intrinsics',
+      'oakd_side_view/projection',
       # 'task_description'
     ]
     pad_before: false
@@ -165,6 +165,13 @@ training_cfg:
   steps_saving: 10
   rollout:
     enabled: false
+
+  visualization:
+    enabled: true
+    num_samples: 5
+    save_dir: ${output_dir}/visualization
+    every_n_epoch: 1
+
 
 
 normalizer_cfg:
