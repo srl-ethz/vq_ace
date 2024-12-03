@@ -152,20 +152,21 @@ class ObsEncoder:
                                 flatten=False
                     )
         elif type=="crop_resnet18":
-            return nn.Sequential(
-                TrajVisionResizer(
+            steps = [TrajVisionResizer(
                     size = cfg["resize_shape"] # h w
-                ),
-                CropRandomizer(
+                )]
+            if "crop_shape" in cfg.keys() and cfg["crop_shape"] is not None:
+                steps.append(CropRandomizer(
                     crop_height = cfg["crop_shape"][0],
                     crop_width = cfg["crop_shape"][1]
-                ),
-                ResNet18(self.output_dim, 
+                ))
+            steps.append(ResNet18(self.output_dim, 
                             input_channel=cfg.get("input_channel", 3), 
                             pretrained=cfg.get("pretrained", False), 
                             flatten=cfg.get("flatten", False), 
                             input_shape=cfg.get("input_shape", cfg["crop_shape"])
                 ))
+            return nn.Sequential(*steps)
 
         elif type=="none":
             return lambda x:x
