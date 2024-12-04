@@ -132,7 +132,7 @@ class TrainerMixin(ABC, AutoInit, cfgname_and_funcs=[("trainer_cfg", "_init_trai
 
     def _optms_zero_grad(self):
         for optimizer in self._optimizers.values():
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)
 
     def _step_optimizers(self):
         for optimizer in self._optimizers.values():
