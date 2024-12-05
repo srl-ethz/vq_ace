@@ -150,6 +150,7 @@ lr_scheduler_cfg:
 training_cfg:
   num_epochs: ${preset_robomimic.train.num_epochs}
   num_steps_per_epoch: 200
+  num_eval_steps_per_epoch: 20
   steps_saving: 10
   rollout:
     every_n_epoch: 20
