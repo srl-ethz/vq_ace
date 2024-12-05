@@ -12,6 +12,7 @@ from collections import OrderedDict
 import time
 import json
 from tqdm import tqdm
+from ..common.timer import Timer
 
 def set_seed(seed: int):
     """
@@ -47,6 +48,7 @@ class Pipeline(AutoInit, cfgname_and_funcs=((None, "_init_workspace"),)):
             self.resume_path = cfg["resume_path"]
         self.output_dir = output_dir
         self._cfg = cfg
+        self._timer = Timer()
 
         # dump the config if output_dir is not None
         if self.output_dir is not None:
@@ -160,15 +162,16 @@ class Lr_SchedulerMixin(AutoInit, cfgname_and_funcs=(("lr_scheduler_cfg", "_crea
                 self._lr_schedulers[model_name] = get_scheduler(name, self.algo._optimizers[model_name], **model_scheduler_cfg.get("params", {}))
         
     def _step_schedulers(self, metrics_dict):
-        for k, scheduler in self._lr_schedulers.items():
-            cfg = self._lr_scheduler_cfg[k]
-            if scheduler is None:
-                pass
-            if cfg.get("step_with_metrics", False):
-                metrics = metrics_dict[cfg["metrics_name"]]
-                scheduler.step(metrics)
-            else:
-                scheduler.step()
+        with self._timer.time("step_schedulers"):
+            for k, scheduler in self._lr_schedulers.items():
+                cfg = self._lr_scheduler_cfg[k]
+                if scheduler is None:
+                    pass
+                if cfg.get("step_with_metrics", False):
+                    metrics = metrics_dict[cfg["metrics_name"]]
+                    scheduler.step(metrics)
+                else:
+                    scheduler.step()
 
 
 #####
