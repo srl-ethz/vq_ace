@@ -151,10 +151,12 @@ class DataAugmentationMixin(AutoInit, cfgname_and_funcs=(("data_augmentation_cfg
         """
         Augment the batch data
         """
-        return self.data_augmentor.augment_train(batch, mask_batch)
+        with self._timer.time("data_augmentation"):
+            return self.data_augmentor.augment_train(batch, mask_batch)
     
     def data_augmentation_eval(self, batch, mask_batch):
         """
         Augment the batch data
         """
-        return self.data_augmentor.augment_eval(batch, mask_batch)
+        with self._timer.time("data_augmentation"):
+            return self.data_augmentor.augment_eval(batch, mask_batch)
