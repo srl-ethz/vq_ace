@@ -16,21 +16,6 @@ import os
 from torch.autograd import Variable
 from ..models.common.vector_quantizer import VectorQuantizerEMA
 
-class ActionChunkingPolicyMixin(PolicyMixin):
-    def predict_action(self, obs_dict):
-        """
-        Compute the action to take in the current state.
-        """
-        if self._policy_step_cnt == 0:
-            with torch.no_grad():
-                obs_dict, mask_batch = self._get_policy_observation(obs_dict)
-                z = torch.zeros((self._policy_bs, self.T_z, self.z_dim), device=self.device)
-                output =  self.decode(z, obs_dict, mask_batch)
-                self._policy_aggregator.push(output)
-        self._policy_step_cnt = (self._policy_step_cnt + 1) % self._policy_update_every
-        policy_output_step = self._policy_aggregator.step()
-        policy_action = self._translate_policy_output(policy_output_step, obs_dict)
-        return policy_action
 
 class ACT(Algo, ObsEncoderMixin):
     """
@@ -163,6 +148,14 @@ class ACT(Algo, ObsEncoderMixin):
         mu = act_encoder_out['mu'] # (batch, T_z, z_dim)
         logvar = act_encoder_out['logvar'] # (batch, T_z, z_dim)
         z = reparametrize(mu, logvar)
+        return self.decode(z, batch, mask_batch)
+
+    def generate(self, batch, mask_batch, target_mask=None):
+        """
+        Note: this generate is the generation from ACT algorithm. Z is set to zero directly
+        """
+        bs = list(mask_batch.values())[0].shape[0]
+        z = torch.zeros((bs, self.T_z, self.z_dim), device=self.device)
         return self.decode(z, batch, mask_batch)
 
     def export_onnx(self, batch, batch_mask, datakeys, f):
@@ -318,10 +311,10 @@ def reparametrize(mu, logvar):
     eps = Variable(std.data.new(std.size()).normal_())
     return mu + std * eps
 
-class ACTPolicy(ACT, ActionChunkingPolicyMixin):
+class ACTPolicy(ACT, PolicyMixin):
     pass
 
-class ACT_VQPolicy(ACT_VQ, ActionChunkingPolicyMixin):
+class ACT_VQPolicy(ACT_VQ, PolicyMixin):
     pass
 
 

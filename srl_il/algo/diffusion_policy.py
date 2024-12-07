@@ -122,8 +122,7 @@ class Diffusion(Algo, ObsEncoderMixin):
 
         return self._models_projs["token_to_target_proj"](out[:, target_begin_dim:, :])
     
-
-    def denoise(self, batch, mask_batch, target_mask=None):
+    def generate(self, batch, mask_batch, target_mask=None):
         bs = list(mask_batch.values())[0].shape[0]
         cond = self.encode_obs(batch, mask_batch, self.network_group_keys) #(obs_embeds, obs_posembs, obs_masks) # (batch, tokens, d_model)
 
@@ -146,20 +145,8 @@ class Diffusion(Algo, ObsEncoderMixin):
 
         return target_dict
 
-class DiffusionPolicy(Diffusion, PolicyMixin):
-    def predict_action(self, obs_dict):        
-        if self._policy_step_cnt == 0:
-            with torch.no_grad():
-                obs_dict, mask_batch = self._get_policy_observation(obs_dict)
-                policy_output = self.denoise(obs_dict, mask_batch)
-                self._policy_aggregator.push(policy_output)
-        self._policy_step_cnt = (self._policy_step_cnt + 1) % self._policy_update_every
-        policy_output_step = self._policy_aggregator.step()
-        policy_action = self._translate_policy_output(policy_output_step, obs_dict)
-        return policy_action
 
-
-class DiffusionPolicyTrainer(DiffusionPolicy, TrainerMixin):
+class DiffusionPolicyTrainer(DiffusionPolicy, TrainerMixin, PolicyMixin):
     def _init_trainer(self, loss_params, optimizer_cfg):
         super()._init_trainer(optimizer_cfg)
         self._loss_params = loss_params

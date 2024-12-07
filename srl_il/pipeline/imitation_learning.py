@@ -127,7 +127,7 @@ class ImitationLearningPipeline(Pipeline, AlgoMixin, DatasetMixin, Lr_SchedulerM
                             batch, mask_batch = next(iter(self.eval_loader))
                             batch = {k: v[:num_samples].to(self.algo.device) for k, v in batch.items()}
                             mask_batch = {k: v[:num_samples].to(self.algo.device) for k, v in mask_batch.items()}
-                            predicted_actions = self.algo.reconstruct(batch, mask_batch)
+                            predicted_actions = self.algo.generate(batch, mask_batch)
                             image_paths = self.visualize(batch, predicted_actions, epoch)
                             wandb.log({k: wandb.Video(v) for k, v in image_paths.items()})
                     

@@ -470,9 +470,16 @@ class PolicyMixin(ABC, AutoInit, cfgname_and_funcs=[("policy_cfg", "_init_policy
         self._policy_aggregator.reset_idx(idx)
         self._policy_step_cnt = 0
 
-    @abstractmethod
     def predict_action(self, obs_dict):
         """
-        Compute the action to take in the current state.
-        """
-        pass
+        predict action as a generation task, assume the existence of self.generate
+        """     
+        if self._policy_step_cnt == 0:
+            with torch.no_grad():
+                obs_dict, mask_batch = self._get_policy_observation(obs_dict)
+                policy_output = self.generate(obs_dict, mask_batch)
+                self._policy_aggregator.push(policy_output)
+        self._policy_step_cnt = (self._policy_step_cnt + 1) % self._policy_update_every
+        policy_output_step = self._policy_aggregator.step()
+        policy_action = self._translate_policy_output(policy_output_step, obs_dict)
+        return policy_action
