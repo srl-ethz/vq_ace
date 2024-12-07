@@ -146,7 +146,7 @@ class Diffusion(Algo, ObsEncoderMixin):
         return target_dict
 
 
-class DiffusionPolicyTrainer(DiffusionPolicy, TrainerMixin, PolicyMixin):
+class DiffusionPolicyTrainer(Diffusion, TrainerMixin, PolicyMixin):
     def _init_trainer(self, loss_params, optimizer_cfg):
         super()._init_trainer(optimizer_cfg)
         self._loss_params = loss_params
