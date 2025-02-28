@@ -2,6 +2,10 @@
 
 The code framework is adapted from [srl_il](https://github.com/srl-ethz/srl_il)
 
+The VQACE-MPC implementation is in [vqace_mpc](https://github.com/srl-ethz/vqace_mpc)
+
+The VQACE-RL implementation is in the vqace_rl branch of [faive_gym_oss](https://github.com/srl-ethz/faive_gym_oss/tree/vqace_rl)
+
 ## Get started
 
 The following is tested on Ubuntu22.04
