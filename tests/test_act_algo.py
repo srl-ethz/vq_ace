@@ -1,7 +1,6 @@
 # test algo.act
 import unittest
-from srl_il.algo.act import ACT, ACT_VQ
-from srl_il.models.common.linear_normalizer import LinearNormalizer
+from vq_ace.algo.act import ACT, ACT_VQ
 import torch
 from tempfile import NamedTemporaryFile
 import onnx
@@ -21,7 +20,7 @@ class TestACT(unittest.TestCase):
     act_cfg = dict(
         algo_cfg = dict(
             device = "cpu",
-            target_dims = {"a": a_dim},
+            a_dim = a_dim,
             z_dim = z_dim,
             T_target = T_target,
             T_z = T_z,
@@ -34,7 +33,6 @@ class TestACT(unittest.TestCase):
         ),
         obs_encoder_cfg = dict(
             output_dim= 32,
-            group_emb_cfg = None,
             obs_groups_cfg = dict(
                 obs= dict(
                     datakeys = ["obs"],
@@ -58,8 +56,11 @@ class TestACT(unittest.TestCase):
         Test the causal and no_causal mode of ACT
         """
         algo = ACT(**self.act_cfg)
-        algo._normalizers['a'] = LinearNormalizer(torch.tensor(0.), torch.tensor(1.))
-        algo._normalizers['obs'] = LinearNormalizer(torch.tensor(0.), torch.tensor(1.))
+
+        algo._normalizer_means['target'] = 0
+        algo._normalizer_stds['target'] = 1
+        algo._normalizer_means['obs_obs'] = 0
+        algo._normalizer_stds['obs_obs'] = 1
 
         algo.set_eval() # otherwise the dropout will be on and the result will be different
 
@@ -73,16 +74,14 @@ class TestACT(unittest.TestCase):
             obs = torch.ones(3, 1)
         )
         target = torch.randn(3, 5, 2)
-        obs_batch["a"] = target
-        act_encoder_out= algo.encode(obs_batch, mask_batch)
+        act_encoder_out= algo.encode(target, obs_batch, mask_batch)
         mu0 = act_encoder_out["mu"]
         
         # modify the target[0], target[1], target[2]. The corresponding mu and logvar should change
         target[0, 0] += 1.
         target[1, 2] += 1.
         target[2, 3] += 1.
-        obs_batch["a"] = target
-        act_encoder_out = algo.encode(obs_batch, mask_batch)
+        act_encoder_out = algo.encode(target, obs_batch, mask_batch)
         mu1 = act_encoder_out["mu"]
         self.assertTrue(all([mu0[0,0,i] != mu1[0,0,i] for i in range(self.z_dim)]))
         self.assertTrue(all([mu0[0,1,i] != mu1[0,1,i] for i in range(self.z_dim)]))
@@ -95,11 +94,11 @@ class TestACT(unittest.TestCase):
 
         # test decode   
         z = torch.randn(3, 2, 1)
-        recon0 = algo.decode(z, obs_batch, mask_batch)["a"]
+        recon0 = algo.decode(z, obs_batch, mask_batch)
 
         z[1, 0] += 1.
         z[2, 1] += 1.
-        recon1 = algo.decode(z, obs_batch, mask_batch)["a"]
+        recon1 = algo.decode(z, obs_batch, mask_batch)
 
         self.assertTrue(all([recon0[0,0,i] == recon1[0,0,i] for i in range(self.a_dim)]))
         self.assertTrue(all([recon0[0,1,i] == recon1[0,1,i] for i in range(self.a_dim)]))
@@ -121,9 +120,10 @@ class TestACT(unittest.TestCase):
 
     def test_onnx(self):
         act = ACT(**self.act_cfg)
-        act._normalizers['a'] = LinearNormalizer(torch.randn(self.a_dim), torch.rand(self.a_dim)+1)
-        act._normalizers['obs'] = LinearNormalizer(torch.randn(6), torch.rand(6)+1)
-
+        act._normalizer_means['target'] = torch.randn(self.a_dim)
+        act._normalizer_stds['target'] = torch.rand(self.a_dim)+1
+        act._normalizer_means['obs_obs'] = torch.randn(6)
+        act._normalizer_stds['obs_obs'] = torch.rand(6)+1
         act.set_device("cpu")
         act.set_eval() 
 
@@ -151,7 +151,7 @@ class TestACT(unittest.TestCase):
             z = torch.rand((bs, self.T_z, self.z_dim), device="cpu") 
             # act.set_eval() 
             with torch.no_grad():
-                out = act.decode(z, obs_batch, mask_batch)["a"]
+                out = act.decode(z, obs_batch, mask_batch)
 
             # Load the ONNX model
             onnx_model = onnx.load(temp_file.name)
@@ -186,7 +186,7 @@ class TestACT_VQ(unittest.TestCase):
     actvq_cfg = dict(
         algo_cfg = dict(
             device = "cpu",
-            target_dims = {"a": a_dim},
+            a_dim = a_dim,
             z_dim = z_dim,
             T_target = T_target,
             T_z = T_z,
@@ -203,7 +203,6 @@ class TestACT_VQ(unittest.TestCase):
         ),
         obs_encoder_cfg = dict(
             output_dim= 32,
-            group_emb_cfg = None,
             obs_groups_cfg = dict(
                 obs1= dict(
                     datakeys = ["obs1"],
@@ -238,10 +237,12 @@ class TestACT_VQ(unittest.TestCase):
 
     def test_onnx(self):
         act_vq = ACT_VQ(**self.actvq_cfg)
-        act_vq._normalizers['a'] = LinearNormalizer(torch.randn(self.a_dim), torch.rand(self.a_dim)+1)
-        act_vq._normalizers['obs1'] = LinearNormalizer(torch.randn(6), torch.rand(6)+1)
-        act_vq._normalizers['obs2'] = LinearNormalizer(torch.randn(9), torch.rand(9)+1)
-
+        act_vq._normalizer_means['target'] = torch.randn(self.a_dim)
+        act_vq._normalizer_stds['target'] = torch.rand(self.a_dim)+1
+        act_vq._normalizer_means['obs_obs1'] = torch.randn(6)
+        act_vq._normalizer_stds['obs_obs1'] = torch.rand(6)+1
+        act_vq._normalizer_means['obs_obs2'] = torch.randn(9)
+        act_vq._normalizer_stds['obs_obs2'] = torch.rand(9)+1
         act_vq.set_device("cpu")
         act_vq.set_eval() 
 
@@ -275,7 +276,7 @@ class TestACT_VQ(unittest.TestCase):
             with torch.no_grad():
                 z = act_vq._models["vq"]._embedding(latent_inds)
                 z = z.view(-1, self.T_z, self.z_dim)
-                out = act_vq.decode(z, obs_batch, mask_batch)["a"]
+                out = act_vq.decode(z, obs_batch, mask_batch)
 
             # Load the ONNX model
             onnx_model = onnx.load(temp_file.name)

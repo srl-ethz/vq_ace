@@ -1,5 +1,5 @@
 import unittest
-from srl_il.dataset.dataset_base import TrajectoryDataset, SequenceDataset, get_train_val_test_seq_datasets
+from vq_ace.dataset.dataset_base import TrajectoryDataset, SequenceDataset, get_train_val_test_seq_datasets
 import torch
 
 class DumbTrajDataset(TrajectoryDataset):
@@ -21,8 +21,6 @@ class DumbTrajDataset(TrajectoryDataset):
     def get_seq_length(self, idx):
         return self.trajs_lengths[idx]
 
-    def load(self, data, key, is_global=False):
-        return data
 
 class TestModule1(unittest.TestCase):
 

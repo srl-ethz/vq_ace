@@ -1,0 +1,193 @@
+defaults:
+  - _self_
+
+batch_size: 4096
+seed: 43
+debugrun: false
+wandb_cfg:
+  project: vq_ace-faive_vae
+  run_name: ${now:%Y%m%d-%H%M%S}
+  tags: ["vq-act"]
+  mode: "online"
+output_dir: runs/${wandb_cfg.run_name}
+actuator_names: ['root2thumb_base', 'thumb_base2pp', 'thumb_pp2mp', 'root2index_pp', 'index_pp2mp', 'root2middle_pp', 'middle_pp2mp', 'root2ring_pp', 'ring_pp2mp', 'root2pinky_pp', 'pinky_pp2mp']
+qpos_names: ['root2thumb_base', 'thumb_base2pp', 'thumb_pp2mp', 'thumb_mp2dp', 'root2index_pp', 'index_pp2mp', 'index_mp2dp', 'root2middle_pp', 'middle_pp2mp', 'middle_mp2dp', 'root2ring_pp', 'ring_pp2mp', 'ring_mp2dp', 'root2pinky_pp', 'pinky_pp2mp', 'pinky_mp2dp']
+action_name_in_batch: 'action'
+
+pipeline:
+  _target_: vq_ace.pipeline.training.TrainPipeline
+
+dataset_cfg:
+  ## embed faive dataset
+  # data:
+  #   _target_: vq_ace.dataset.embed_faive_dataset.embed_faive_train_val_test
+  #   data_directory: /home/chenyu/Data/generated/embed_faive_rolling_20240821/
+  #   actuator_names: ${actuator_names}
+  #   qpos_joint_names: ${qpos_names}
+  #   test_fraction: 0.1
+  #   val_fraction: 0.1
+  #   window_size_train: 56 # 55 for action data, leave 5 extra for traj_speed augmentation
+  #   window_size_test: 56
+  #   # keys_traj: [['action', 'action', 2, null], ['qpos', 'qpos', null, 2]]
+  #   keys_traj: [['action', 'qpos', 1, null], ['qpos', 'qpos', null, 1]] # use the recorded qpos as the action to predict
+  #   keys_global: []
+  #   pad_before: false
+  #   pad_after: false
+  #   pad_type: 'zero'
+  #   random_seed: ${seed}
+  ## Rokoko dataset
+  data:
+    _target_: vq_ace.dataset.rokoko_dataset.rokoko_train_val_test
+    data_directory: /home/chenyu/Data/generated/rokoko/retargeted/
+    test_fraction: 0.0
+    val_fraction: 0.1
+    window_size_train: 51 # 55 for action data, leave 5 extra for traj_speed augmentation
+    window_size_test: 51
+    # keys_traj: [['action', 'action', 2, null], ['qpos', 'qpos', null, 2]]
+    keys_traj: [['action', 'joints', 1, null], ['qpos', 'joints', null, 1]] # use the recorded qpos as the action to predict
+    keys_global: []
+    pad_before: false
+    pad_after: false
+    pad_type: 'near'
+    random_seed: ${seed}
+  batch_size: ${batch_size}
+  pin_memory: false
+  num_workers: 0
+
+
+algo_cfg:
+  _target_: vq_ace.algo.act.ACT_VQTrainer
+  algo_cfg:
+    device: cuda
+    a_dim: 11 # qpos dim # 11 for action dim
+    z_dim: 8
+    T_target: 50
+    T_z: 5
+    encoder_is_causal: false
+    decoder_is_causal: true
+    encoder_group_keys: ['qpos']
+    decoder_group_keys: ['qpos']
+    encoder_cfg:
+      d_model: 128
+      nhead: 4
+      num_encoder_layers: 3
+      dim_feedforward: 512
+      dropout: 0.1
+      activation: 'relu'
+    decoder_cfg:
+      d_model: 128
+      nhead: 4
+      num_encoder_layers: 3
+      dim_feedforward: 512
+      dropout: 0.1
+      activation: 'relu'
+    vq_cfg:
+      num_embeddings: 6
+      decay: 0.99
+  trainer_cfg:
+    action_name_in_batch: ${action_name_in_batch}
+    loss_params:
+      vq_commitment_weight: 0.1
+    optimizer_cfg:
+      act_encoder:
+        optm_cls: torch.optim.Adam
+        lr: 0.0001
+      act_decoder:
+        optm_cls: torch.optim.Adam
+        lr: 0.0001
+      obs_encoder:
+        optm_cls: torch.optim.Adam
+        lr: 0.0001
+      vq:
+        optm_cls: torch.optim.Adam
+        lr: 0.0001
+  obs_encoder_cfg:
+    output_dim: 128
+    obs_groups_cfg:
+      qpos:
+        datakeys: ['qpos']
+        encoder_cfg:
+          type: torch
+          _target_: torch.nn.Linear
+          in_features: 11
+          out_features: 128
+        posemb_cfg:
+          type: seq
+          seq_len: 1
+
+lr_scheduler_cfg:
+  act_encoder:
+    scheduler_cls: torch.optim.lr_scheduler.StepLR
+    params:
+      step_size: 100
+      gamma: 0.95
+    step_with_metrics: false
+  act_decoder:
+    scheduler_cls: torch.optim.lr_scheduler.StepLR
+    params:
+      step_size: 100
+      gamma: 0.95
+    step_with_metrics: false
+  obs_encoder:
+    scheduler_cls: torch.optim.lr_scheduler.StepLR
+    params:
+      step_size: 100
+      gamma: 0.95
+    step_with_metrics: false
+  vq:
+    scheduler_cls: torch.optim.lr_scheduler.StepLR
+    params:
+      step_size: 100
+      gamma: 0.95
+    step_with_metrics: false
+training_cfg:
+  num_epochs: 400
+  steps_saving: 10
+  steps_visualize: 100
+
+visualizer_cfg:
+  visualizer:
+    _target_: vq_ace.pipeline.mujoco_visulizer.MujocoVisualizer
+    model_path: "/home/chenyu/workspace/vqbet_ws/faive-mujoco-mpc/mjpc/tasks/faiveRolling/faive_hand.xml"
+    cam_cfg :
+      lookat: [0.0, 0.0, 0.0]
+      distance: 0.5
+      azimuth: 179.9 
+      elevation: -25
+      window_size: [480, 360]
+    data_writer:
+      _target_: vq_ace.pipeline.mujoco_visulizer.MujocoWriterStablePosCtrlAccordingToNames
+      actuator_names: ${actuator_names}
+
+normalizer_cfg:
+  # target: # the target to reconstruct
+  #   type: dataset_minmax
+  #   dataname: action
+  target: # the target to reconstruct
+    type: dataset_minmax
+    dataname: joints
+  obs_qpos: # the qpos to reconstruct
+    type: dataset_minmax
+    dataname: joints  
+
+data_augmentation_cfg:
+  data_augments:
+    - outname: action
+      type: trajectory_speed
+      T_input: 50
+      T_min: 50
+      T_max: 100
+      T_output: 50
+    - outname: qpos
+      type: gaussian_noise
+      mean: 0.0
+      std: 0.03
+    # - outname: action
+    #   type: expressiveness
+    #   prob: 0.1
+
+# set the directory where the output files get saved
+hydra:
+  output_subdir: ${output_dir}/hydra
+  run:
+    dir: .

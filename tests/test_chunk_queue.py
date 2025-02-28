@@ -1,6 +1,6 @@
 import unittest
 import torch
-from srl_il.common.chunk_buffer import ChunkBuffer, TemporalAggregationBuffer, ChunkBufferBatch
+from vq_ace.common.chunk_buffer import ChunkBuffer, TemporalAggregationBuffer, ChunkBufferBatch
 
 class TestChunkBuffer(unittest.TestCase):
     def test_append_and_get_top(self):

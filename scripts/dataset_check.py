@@ -12,9 +12,9 @@ import torch
 import wandb
 from omegaconf import OmegaConf
 from pathlib import Path
-from srl_il.pipeline.pipeline_base import Pipeline, DatasetMixin, AlgoMixin, NormalizationMixin
-from srl_il.pipeline.data_augmentation import DataAugmentationMixin
-from srl_il.algo.base_algo import Algo
+from vq_ace.pipeline.pipeline_base import Pipeline, DatasetMixin, AlgoMixin, NormalizationMixin
+from vq_ace.pipeline.data_augmentation import DataAugmentationMixin
+from vq_ace.algo.base_algo import Algo
 import os
 from tqdm import tqdm
 from copy import deepcopy
@@ -87,7 +87,7 @@ class DataCheckPipeline(Pipeline, DatasetMixin, AlgoMixin, NormalizationMixin, D
 
 @hydra.main(
     version_base=None,
-    config_path=str(pathlib.Path(__file__).parent.parent.joinpath('srl_il', 'cfg'))
+    config_path=str(pathlib.Path(__file__).parent.parent.joinpath('vq_ace', 'cfg'))
 )
 def main(cfg: OmegaConf):
     # resolve immediately so all the ${now:} resolvers

@@ -3,9 +3,9 @@ requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "srl_il"
+name = "vq_ace"
 version = "0.1.0"  # Replace with your actual version
-description = "A framework for loading, training, and evaluating for imitation learning. From ETHz Soft Robotics Lab."
+description = "Efficient Policy Search for Dexterous Robotic Manipulation via Action Chunking Embedding"
 readme = "README.md"
 # license = "GPL-3.0"  # Replace with your actual license
 authors = [{ name = "Chenyu Yang", email = "chenyu.yang@ethz.ch" }]  # Replace with your details
@@ -32,17 +32,6 @@ dev = [
 test = [
     "pytest",
     "coverage",
-]
-robomimic = [
-    "robomimic",
-    "robosuite==1.4.1"
-]
-diffsion_policy = [
-    "diffusion_policy",
-    "threadpoolctl",
-    "pytorch3d",
-    "imagecodecs==2022.8.8",
-    "av"
 ]
 onnx = [
     "onnx",

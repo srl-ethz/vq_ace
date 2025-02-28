@@ -4,9 +4,8 @@ import os
 import tempfile
 
 import torch.utils
-from srl_il.algo.base_algo import Algo, TrainerMixin
-from srl_il.pipeline.training import TrainPipeline
-from srl_il.models.common.linear_normalizer import LinearNormalizer
+from vq_ace.algo.base_algo import Algo, TrainerMixin
+from vq_ace.pipeline.training import TrainPipeline
 from torch.utils.data import TensorDataset
 from omegaconf import OmegaConf
 
@@ -72,7 +71,6 @@ class TestSaveAndLoad(unittest.TestCase):
         ),
         lr_scheduler_cfg=dict(
             nn=dict(
-                type="torch",
                 scheduler_cls="torch.optim.lr_scheduler.ExponentialLR",
                 params=dict(
                     gamma=0.9
@@ -85,7 +83,7 @@ class TestSaveAndLoad(unittest.TestCase):
             run_name="dummy",
             mode="disabled"
         ),
-        visualizer_cfg=dict(visualizer = None, visualizer_key = None),
+        visualizer_cfg=dict(visualizer = None),
         normalizer_cfg=dict(
             foo = {
                 "type": "hardcode",
@@ -107,7 +105,7 @@ class TestSaveAndLoad(unittest.TestCase):
         
         # make changes to the pipeline:
         pipeline.algo._models['nn'].weight.data.fill_(0.5)
-        pipeline.algo._normalizers['foo'].params_dict["offset"] = torch.tensor(0.528)
+        pipeline.algo._normalizer_means['foo'] = 0.528
         pipeline.algo._optimizers['nn'].step()
         pipeline._lr_schedulers["nn"].step()
         pipeline.epoch = 10
@@ -134,8 +132,8 @@ class TestSaveAndLoad(unittest.TestCase):
         self.assertEqual(new_pipeline.epoch, 10)
         self.assertEqual(new_pipeline.best_train_loss, 0.5)
         self.assertTrue(torch.allclose(new_pipeline.algo._models['nn'].weight.data, torch.tensor(0.5)))
-        self.assertEqual(new_pipeline.algo._normalizers['foo'].params_dict["offset"], 0.528)
-        self.assertEqual(new_pipeline.algo._normalizers['foo'].params_dict["scale"], 0.567)
+        self.assertEqual(new_pipeline.algo._normalizer_means['foo'], 0.528)
+        self.assertEqual(new_pipeline.algo._normalizer_stds['foo'], 0.567)
         self.assertAlmostEqual(new_pipeline.algo._optimizers['nn'].param_groups[0]['lr'], 0.0009)
         self.assertEqual(new_pipeline._lr_schedulers["nn"].last_epoch, 1)
 
@@ -146,7 +144,7 @@ class TestSaveAndLoad(unittest.TestCase):
         algo = DummyTrainer(**cfg.algo_cfg)
         loss = algo._models['nn'](torch.randn(10, 10)).sum()
         loss.backward()
-        algo._normalizers['foo'] = LinearNormalizer(torch.tensor(0.234), torch.tensor(3.371))
+        algo._normalizer_means['foo'] = 0.234
         algo._optimizers['nn'].step()
 
         algo_weight = algo._models['nn'].weight.data.clone()
@@ -160,8 +158,7 @@ class TestSaveAndLoad(unittest.TestCase):
         
         self.assertTrue(torch.allclose(new_algo._models['nn'].weight.data, algo_weight))
         self.assertTrue(torch.allclose(new_algo._optimizers['nn'].state[new_algo._models['nn'].weight]['exp_avg'], algo_optim_exp_avg))
-        self.assertEqual(new_algo._normalizers['foo'].params_dict["offset"], 0.234)
-        self.assertEqual(new_algo._normalizers['foo'].params_dict["scale"], 3.371)
+        self.assertEqual(new_algo._normalizer_means['foo'], 0.234)
         self.assertEqual(new_algo._optimizers['nn'].param_groups[0]['lr'], 0.001)
     
 
@@ -170,7 +167,7 @@ class TestSaveAndLoad(unittest.TestCase):
         algo = DummyTrainer(**cfg.algo_cfg)
         loss = algo._models['nn'](torch.randn(10, 10)).sum()
         loss.backward()
-        algo._normalizers['foo'] = LinearNormalizer(torch.tensor(0.4872), torch.tensor(3.574))
+        algo._normalizer_means['foo'] = 0.234
         algo._optimizers['nn'].step()
 
         algo_weight = algo._models['nn'].weight.data.clone()
@@ -182,8 +179,7 @@ class TestSaveAndLoad(unittest.TestCase):
         new_algo.deserialize(states)
         
         self.assertTrue(torch.allclose(new_algo._models['nn'].weight.data, algo_weight))
-        self.assertEqual(new_algo._normalizers['foo'].params_dict["offset"], 0.4872)
-        self.assertEqual(new_algo._normalizers['foo'].params_dict["scale"], 3.574)
+        self.assertEqual(new_algo._normalizer_means['foo'], 0.234)
         
 
 if __name__ == '__main__':
