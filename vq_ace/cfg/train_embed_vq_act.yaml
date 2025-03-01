@@ -1,7 +1,7 @@
 defaults:
   - _self_
 
-batch_size: 256
+batch_size: 1024
 seed: 43
 debugrun: false
 wandb_cfg:
